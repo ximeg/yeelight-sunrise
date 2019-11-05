@@ -1,9 +1,31 @@
+#!/usr/bin/env python
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from time import sleep
 
-MIN = 1
+# GLOBAL USER SETTINGS
+MIN = 0.5
 RED_DURATION = 10*MIN
+
+
+# PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
+parser = argparse.ArgumentParser(
+    description='A script to smoothly activate bedroom lamps in a defined order'
+)
+parser.add_argument("-v", "--verbose", action="count",
+                    help="increase output verbosity")
+args = parser.parse_args()
+level = logging.WARNING
+if args.verbose == 1:
+    level=logging.INFO
+if args.verbose == 2:
+    level=logging.DEBUG
+logging.basicConfig(level=level,
+    format="%(asctime)s: %(message)s")
+
+
+
 
 #logging.basicConfig(level=logging.DEBUG)
 
@@ -23,12 +45,16 @@ def activate_lamp(args):
     activates the flow
     """
     lamp, delay = args
-    logging.debug('Lamp %s: waiting %i min before start...' % (lamp, delay))
+
+    info  = lambda m: logging.info ('%s: %s' % (lamp, m))
+    debug = lambda m: logging.debug('%s: %s' % (lamp, m))
+
+    debug('waiting %is before start...' % delay)
     sleep(delay)
-    logging.info("Activating lamp %s: set brightness to 1, red color and turn_on" % lamp)
+    info("Activating (brightness = 1%, color=red, turn_on)")
     duration = RED_DURATION - delay
-    logging.debug('duration of the first transition: %i' % duration)
-    logging.debug('starting the rest of the transitions')
+    debug('Duration of the first transition: %is' % duration)
+    debug('Starting the rest of the transitions')
 
 
 def main():
@@ -36,10 +62,11 @@ def main():
     if any([d >= RED_DURATION for d in lamp_delays.values()]):
         raise ValueError('Lamp delays exceed duration of the red phase')
     
+    #activate_lamp(lamp_delays.popitem())
+    
     with ThreadPoolExecutor() as executor:
         executor.map(activate_lamp, lamp_delays.items())
 
-    #activate_lamp(*lamp_delays.popitem())
 
 if __name__ == '__main__':
     main()
