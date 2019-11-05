@@ -8,6 +8,13 @@ from time import sleep
 MIN = 0.5
 RED_DURATION = 10*MIN
 
+LAMP_DELAYS = {
+    'bed':        0,
+    'ikea lamp':  4*MIN,
+    'nightstand': 6*MIN,
+    'bedroom 1':  8*MIN,
+    'bedroom 2':  9*MIN,
+}
 
 # PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
 parser = argparse.ArgumentParser(
@@ -26,17 +33,6 @@ logging.basicConfig(level=level,
     datefmt='%d/%m %H:%M:%S')
 
 
-
-
-#logging.basicConfig(level=logging.DEBUG)
-
-lamp_delays = {
-    'bed':        0,
-    'ikea lamp':  4*MIN,
-    'nightstand': 6*MIN,
-    'bedroom 1':  8*MIN,
-    'bedroom 2':  9*MIN,
-}
 
 
 def activate_lamp(args):
@@ -60,13 +56,13 @@ def activate_lamp(args):
 
 def main():
     # Sanity check
-    if any([d >= RED_DURATION for d in lamp_delays.values()]):
+    if any([d >= RED_DURATION for d in LAMP_DELAYS.values()]):
         raise ValueError('Lamp delays exceed duration of the red phase')
     
-    #activate_lamp(lamp_delays.popitem())
+    #activate_lamp(LAMP_DELAYS.popitem())
     
     with ThreadPoolExecutor() as executor:
-        executor.map(activate_lamp, lamp_delays.items())
+        executor.map(activate_lamp, LAMP_DELAYS.items())
 
 
 if __name__ == '__main__':
