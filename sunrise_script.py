@@ -8,7 +8,7 @@ from yeelight.transitions import *
 
 # GLOBAL USER SETTINGS
 #     s    ms
-MIN = 4  * 1000
+MIN = 1  * 1000
 RED_DURATION = 10*MIN
 RED_BRIGHTNESS = 40
 POWER_ON_DURATION= 5000 if MIN < 10000 else 0.5*MIN
@@ -34,6 +34,7 @@ phase2_transitions = [
 
     # Bright cool white
     TemperatureTransition(6000, duration=6*MIN, brightness=100),
+    TemperatureTransition(1800, duration=100, brightness=1),
 ]
 
 
@@ -43,6 +44,8 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument("-v", "--verbose", action="count",
                     help="increase output verbosity")
+parser.add_argument("-d", "--duration", action="store_true",
+                    help="print duration of the whole sunrise and exit")
 args = parser.parse_args()
 level = logging.WARNING
 if args.verbose == 1:
@@ -110,6 +113,12 @@ def main():
     if any([d >= RED_DURATION for d in LAMP_DELAYS.values()]):
         raise ValueError('Lamp delays exceed duration of the red phase')
 
+    if args.duration:
+        total_duration = RED_DURATION + POWER_ON_DURATION + \
+                sum([a.duration for a in phase2_transitions])
+        print("Total duration of the sunrise: %.1f min" % (total_duration / 60000))
+        return
+
     # Discover available lamps
     logging.info('Discovering lamps in the network')
     bulbs = discover_bulbs()
@@ -121,6 +130,8 @@ def main():
     with ThreadPoolExecutor() as executor:
         f = lambda it: lamp_thread(*it, bulbs)
         executor.map(f, LAMP_DELAYS.items())
+
+    alarm()
 
 
 if __name__ == '__main__':
