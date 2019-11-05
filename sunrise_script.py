@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
@@ -6,9 +6,34 @@ import time
 from yeelight import *
 from yeelight.transitions import *
 
-# GLOBAL USER SETTINGS
-#     s    ms
-MIN = 1  * 1000
+# PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
+parser = argparse.ArgumentParser(
+    description='A script to smoothly activate bedroom lamps in a defined order'
+)
+parser.add_argument("-v", "--verbose", action="count",
+                    help="increase output verbosity")
+parser.add_argument("-d", "--duration", action="store_true",
+                    help="print duration of the whole sunrise and exit")
+parser.add_argument("-a", "--alarm", type=int, default=0,
+                    help="# of light pulses for alarm after the sunrise")
+parser.add_argument("-n", "--no_sunrise", action="store_true",
+                    help="disable sunrise, use only alarm, if set")
+parser.add_argument("-M", "--minute_duration", type=float, default=60,
+                    help="duration of minute, can be changed for debugging")
+args = parser.parse_args()
+level = logging.WARNING
+if args.verbose == 1:
+    level=logging.INFO
+if args.verbose == 2:
+    level=logging.DEBUG
+logging.basicConfig(level=level,
+    format="%(asctime)s: %(message)s",
+    datefmt='%d/%m %H:%M:%S')
+#     s                       ms
+MIN = args.minute_duration  * 1000
+
+#####################################################
+# START OF USER SETTINGS
 RED_DURATION = 10*MIN
 RED_BRIGHTNESS = 40
 POWER_ON_DURATION= 5000 if MIN < 10000 else 0.5*MIN
@@ -43,28 +68,9 @@ alarm_transitions = [
     TemperatureTransition(6000, duration=140, brightness=100),
     SleepTransition(600)
 ]
+# END OF USER SETTINGS
+#####################################################
 
-# PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
-parser = argparse.ArgumentParser(
-    description='A script to smoothly activate bedroom lamps in a defined order'
-)
-parser.add_argument("-v", "--verbose", action="count",
-                    help="increase output verbosity")
-parser.add_argument("-d", "--duration", action="store_true",
-                    help="print duration of the whole sunrise and exit")
-parser.add_argument("-a", "--alarm", type=int, default=0,
-                    help="# of light pulses for alarm after the sunrise")
-parser.add_argument("-n", "--no_sunrise", action="store_true",
-                    help="disable sunrise, use only alarm, if set")
-args = parser.parse_args()
-level = logging.WARNING
-if args.verbose == 1:
-    level=logging.INFO
-if args.verbose == 2:
-    level=logging.DEBUG
-logging.basicConfig(level=level,
-    format="%(asctime)s: %(message)s",
-    datefmt='%d/%m %H:%M:%S')
 
 # Sleep function with argument in ms
 sleep = lambda t: time.sleep(t / 1000.0)
