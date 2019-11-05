@@ -22,7 +22,8 @@ if args.verbose == 1:
 if args.verbose == 2:
     level=logging.DEBUG
 logging.basicConfig(level=level,
-    format="%(asctime)s: %(message)s")
+    format="%(asctime)s: %(message)s",
+    datefmt='%d/%m %H:%M:%S')
 
 
 
@@ -46,8 +47,8 @@ def activate_lamp(args):
     """
     lamp, delay = args
 
-    info  = lambda m: logging.info ('%s: %s' % (lamp, m))
-    debug = lambda m: logging.debug('%s: %s' % (lamp, m))
+    info  = lambda m: logging.info ('I: %10s: %s' % (lamp, m))
+    debug = lambda m: logging.debug('D: %10s: %s' % (lamp, m))
 
     debug('waiting %is before start...' % delay)
     sleep(delay)
