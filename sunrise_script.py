@@ -3,9 +3,11 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from time import sleep
+from yeelight import *
+from yeelight.transitions import *
 
 # GLOBAL USER SETTINGS
-MIN = 0.5
+MIN = 4
 RED_DURATION = 10*MIN
 
 LAMP_DELAYS = {
@@ -15,6 +17,7 @@ LAMP_DELAYS = {
     'bedroom 1':  8*MIN,
     'bedroom 2':  9*MIN,
 }
+
 
 # PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
 parser = argparse.ArgumentParser(
@@ -33,22 +36,33 @@ logging.basicConfig(level=level,
     datefmt='%d/%m %H:%M:%S')
 
 
+def activate_bulb(bulb, duration=15):
+    bulb.set_hsv(1, 100, 1, effect='smooth', duration=1000*duration)
+    sleep(duration)
 
-
-def activate_lamp(args):
+def lamp_thread(lamp, delay, bulbs):
     """
     This function turns on the lamp, calculates
     the duration of the red phase, then
     activates the flow
     """
-    lamp, delay = args
+    warn  = lambda m: logging.warning('W: %10s: %s' % (lamp, m))
+    info  = lambda m: logging.info   ('I: %10s: %s' % (lamp, m))
+    debug = lambda m: logging.debug  ('D: %10s: %s' % (lamp, m))
+    
+    match = [b for b in bulbs if b['capabilities']['name'] == lamp]
+    if len(match) == 1:
+        bulb = Bulb(match[0]['ip'], auto_on=True)
+    else:
+        warn("Lamp not found on the network")
+        return
 
-    info  = lambda m: logging.info ('I: %10s: %s' % (lamp, m))
-    debug = lambda m: logging.debug('D: %10s: %s' % (lamp, m))
-
+    # Start of the logic
     debug('waiting %is before start...' % delay)
     sleep(delay)
-    info("Activating (brightness = 1%, color=red, turn_on)")
+    info("Activating...")
+    activate_bulb(bulb)
+    
     duration = RED_DURATION - delay
     debug('Duration of the first transition: %is' % duration)
     debug('Starting the rest of the transitions')
@@ -58,11 +72,18 @@ def main():
     # Sanity check
     if any([d >= RED_DURATION for d in LAMP_DELAYS.values()]):
         raise ValueError('Lamp delays exceed duration of the red phase')
-    
-    #activate_lamp(LAMP_DELAYS.popitem())
+
+    # Discover available lamps
+    logging.info('Discovering lamps in the network')
+    bulbs = discover_bulbs()
+    logging.info('%i lamp(s) found' % len(bulbs))
+
+    #lamp_thread(LAMP_DELAYS.popitem(), bulbs)
+    #return
     
     with ThreadPoolExecutor() as executor:
-        executor.map(activate_lamp, LAMP_DELAYS.items())
+        f = lambda it: lamp_thread(*it, bulbs)
+        executor.map(f, LAMP_DELAYS.items())
 
 
 if __name__ == '__main__':
