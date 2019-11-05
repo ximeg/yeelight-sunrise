@@ -2,13 +2,16 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
-from time import sleep
+import time
 from yeelight import *
 from yeelight.transitions import *
 
 # GLOBAL USER SETTINGS
-MIN = 4
+#     s    ms
+MIN = 4  * 1000
 RED_DURATION = 10*MIN
+RED_BRIGHTNESS = 40
+POWER_ON_DURATION= 5000 if MIN < 10000 else 0.5*MIN
 
 LAMP_DELAYS = {
     'bed':        0,
@@ -17,6 +20,21 @@ LAMP_DELAYS = {
     'bedroom 1':  8*MIN,
     'bedroom 2':  9*MIN,
 }
+
+# default flow for all lamps after the red phase
+phase2_transitions = [
+    # Orange color
+    TemperatureTransition(1800, duration=3*MIN, brightness=60),
+
+    # Yellow
+    TemperatureTransition(2700, duration=4*MIN, brightness=80),
+
+    # Bright warm white
+    TemperatureTransition(3700, duration=7*MIN, brightness=90),
+
+    # Bright cool white
+    TemperatureTransition(6000, duration=6*MIN, brightness=100),
+]
 
 
 # PARSE COMMAND LINE ARGUMENTS AND SET LOGGING LEVEL
@@ -35,9 +53,11 @@ logging.basicConfig(level=level,
     format="%(asctime)s: %(message)s",
     datefmt='%d/%m %H:%M:%S')
 
+# Sleep function with argument in ms
+sleep = lambda t: time.sleep(t / 1000.0)
 
-def activate_bulb(bulb, duration=15):
-    bulb.set_hsv(1, 100, 1, effect='smooth', duration=1000*duration)
+def activate_bulb(bulb, duration=POWER_ON_DURATION):
+    bulb.set_hsv(1, 100, 1, effect='smooth', duration=duration)
     sleep(duration)
 
 def lamp_thread(lamp, delay, bulbs):
@@ -53,19 +73,36 @@ def lamp_thread(lamp, delay, bulbs):
     match = [b for b in bulbs if b['capabilities']['name'] == lamp]
     if len(match) == 1:
         bulb = Bulb(match[0]['ip'], auto_on=True)
+        bulb.turn_off()
     else:
         warn("Lamp not found on the network")
         return
 
     # Start of the logic
-    debug('waiting %is before start...' % delay)
-    sleep(delay)
+    if delay:
+        debug('waiting %is before start...' % (delay/1000))
+        sleep(delay)
+
     info("Activating...")
     activate_bulb(bulb)
     
     duration = RED_DURATION - delay
-    debug('Duration of the first transition: %is' % duration)
+    debug('Duration of the red transition: %is' % (duration/1000))
     debug('Starting the rest of the transitions')
+
+    transitions = [
+        # Bright red
+        HSVTransition(1, 100, duration=duration, brightness=RED_BRIGHTNESS),
+        *phase2_transitions
+    ]
+
+    bulb.start_flow(
+        Flow(
+            count=1,
+            action=Flow.actions.stay,
+            transitions=transitions
+        )
+    )
 
 
 def main():
