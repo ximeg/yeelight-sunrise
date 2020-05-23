@@ -36,14 +36,24 @@ MIN = args.minute_duration  * 1000
 # START OF USER SETTINGS
 RED_DURATION = 10*MIN
 RED_BRIGHTNESS = 40
-POWER_ON_DURATION= 5000 if MIN < 10000 else 0.5*MIN
+POWER_ON_DURATION= 8000
 
 LAMP_DELAYS = {
     'bed':        0,
     'ikea lamp':  4*MIN,
-    'nightstand': 6*MIN,
-    'bedroom 1':  8*MIN,
+    'bedroom 1':  7*MIN,
     'bedroom 2':  9*MIN,
+
+    'bathroom 1': 9*MIN,
+    'bathroom 2': 9*MIN,
+    'bathroom 3': 9*MIN,
+
+    'floor lamp': 9*MIN,
+
+    'kitchen 1': 7*MIN,
+    'kitchen 2': 8*MIN,
+    'kitchen 3': 9*MIN,
+
 }
 
 # default flow for all lamps after the red phase
@@ -58,14 +68,14 @@ phase2_transitions = [
     TemperatureTransition(3700, duration=7*MIN, brightness=90),
 
     # Bright cool white
-    TemperatureTransition(6000, duration=6*MIN, brightness=100),
+    TemperatureTransition(5000, duration=6*MIN, brightness=100),
 ]
 
 alarm_transitions = [
-    TemperatureTransition(6000, duration=60, brightness=1),
-    TemperatureTransition(6000, duration=140, brightness=100),
-    TemperatureTransition(6000, duration=60, brightness=1),
-    TemperatureTransition(6000, duration=140, brightness=100),
+    TemperatureTransition(5000, duration=60, brightness=1),
+    TemperatureTransition(5000, duration=140, brightness=100),
+    TemperatureTransition(5000, duration=60, brightness=1),
+    TemperatureTransition(5000, duration=140, brightness=100),
     SleepTransition(600)
 ]
 # END OF USER SETTINGS
@@ -96,10 +106,14 @@ def lamp_thread(lamp, delay, bulbs):
     warn  = lambda m: logging.warning('W: %10s: %s' % (lamp, m))
     info  = lambda m: logging.info   ('I: %10s: %s' % (lamp, m))
     debug = lambda m: logging.debug  ('D: %10s: %s' % (lamp, m))
-    
+
     bulb = get_bulb(lamp, bulbs)
     if bulb:
-        bulb.turn_off()
+#        bulb.auto_on = False
+#        bulb.set_brightness(1)
+#        bulb.auto_on = True
+        bulb.turn_off(effect='sudden')
+        sleep(250)
     else:
         warn("Lamp not found on the network")
         return
@@ -111,14 +125,17 @@ def lamp_thread(lamp, delay, bulbs):
 
     info("Activating...")
     activate_bulb(bulb)
-    
+
     duration = RED_DURATION - delay
     debug('Duration of the red transition: %is' % (duration/1000))
     debug('Starting the rest of the transitions')
 
+    # The bed lamp is special, we let it shine to the full power
+    brightness = 100 if lamp == 'bed' else RED_BRIGHTNESS
+
     transitions = [
         # Bright red
-        HSVTransition(1, 100, duration=duration, brightness=RED_BRIGHTNESS),
+        HSVTransition(1, 100, duration=duration, brightness=brightness),
         *phase2_transitions
     ]
 
