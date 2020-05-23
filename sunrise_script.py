@@ -97,6 +97,10 @@ def get_bulb(name, bulbs):
     else:
         return None
 
+def get_bulbs(names, bulbs):
+    for name in names:
+        yield get_bulb(name, bulbs)
+
 def lamp_thread(lamp, delay, bulbs):
     """
     This function turns on the lamp, calculates
