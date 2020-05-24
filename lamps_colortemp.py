@@ -98,7 +98,7 @@ def get_ct (bulb):
 if __name__ == "__main__":
     all_bulbs = discover_bulbs()
 
-    if not 'rooms' in args:
+    if 'room' not in args:
         parser.print_help()
         sys.exit(0)
 
