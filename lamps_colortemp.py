@@ -114,10 +114,17 @@ if __name__ == "__main__":
                 # Power is set and is not zero - clip to 1..100 range
                 if power:
                     p = _clamp(power, 1, 100)
-                # If power is zero, then graduall turn off the lamp
+
+                # If power is zero, then the lamp must be turned off
                 elif power == 0:
-                    p = 1
-                    action = Flow.actions.off
+                    if bulb.get_properties()['power'] == 'on':
+                        # gradually turn off the lamp
+                        p = 1
+                        action = Flow.actions.off
+                    else:
+                        # Nothing to be done, move to the next lamp
+                        continue
+
                 # If power is None, get it from the lamp
                 else:
                     p = get_power(bulb)
