@@ -102,6 +102,10 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(0)
 
+    if args.room is None:
+        parser.print_help()
+        sys.exit(0)
+
     for room in args.room:
         name = room.pop(0)
         power = int(room.pop(0)) if len(room) > 0 else None
